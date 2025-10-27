@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return partes.join(',');
   };
 
-  //cache optimizado con Maps - AHORA GUARDA TOTALIZADOR
+  //cache optimizado con Maps
   const cacheDatos = {
     pollo: new Map(),
     pavo: new Map()
@@ -124,7 +124,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  //cargar datos por rango optimizado - CORREGIDO PARA USAR TOTALIZADOR
+  //cargar datos por rango optimizado
   const cargarDatosPorRango = async (tipo, inicio, fin) => {
     const esPollo = tipo === CONFIG.TIPOS.POLLO;
     const rangoManager = esPollo ? rangoManagerPollo : rangoManagerPavo;
@@ -275,7 +275,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Array.from(dias).sort((a, b) => a - b);
   };
 
-  //filtrar datos del cache - AHORA USA TOTALIZADOR
+  //filtrar datos del cache
   const obtenerDatosFiltrados = (cache, anio, mes, dia) => {
     const datos = [];
     for (const [timestamp, totalizador] of cache) {
@@ -382,7 +382,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return consumoPorDia;
   };
 
-  //agrupar por dia usando diferencia de totalizador
+  //agrupar por dia usando diferencia de totalizador - RETORNA PROMEDIO
   const agruparPorDia = (datos) => {
     const consumoPorDia = calcularConsumoPorDia(datos);
     
@@ -394,7 +394,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       return diaA - diaB;
     });
     
-    return { categorias, valores: categorias.map(k => consumoPorDia.get(k)) };
+    const valores = categorias.map(k => consumoPorDia.get(k));
+    const promedio = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
+    
+    return { categorias, valores, promedio };
   };
 
   //calcular consumo por diferencia de totalizador por mes
@@ -424,7 +427,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return consumoPorMes;
   };
 
-  //agrupar por mes usando diferencia de totalizador
+  //agrupar por mes usando diferencia de totalizador - RETORNA PROMEDIO
   const agruparPorMes = (datos) => {
     const consumoPorMes = calcularConsumoPorMes(datos);
     
@@ -435,7 +438,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       return mesA - mesB;
     });
     
-    return { categorias, valores: categorias.map(k => consumoPorMes.get(k)) };
+    const valores = categorias.map(k => consumoPorMes.get(k));
+    const promedio = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
+    
+    return { categorias, valores, promedio };
   };
 
   //agrupar por hora usando diferencia de totalizador
@@ -446,7 +452,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return { categorias, valores: categorias.map(k => consumoPorHora.get(k)) };
   };
 
-  //calcular consumo por semana usando diferencia de totalizador
+  //calcular consumo por semana usando diferencia de totalizador - RETORNA CONTEO DE DIAS
   const calcularConsumoPorSemana = (datos) => {
     const porSemana = new Map();
 
@@ -477,22 +483,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     const consumoPorSemana = new Map();
+    const diasPorSemana = new Map();
+    
     for (const [semana, registros] of porSemana) {
       if (registros.length > 0) {
         registros.sort((a, b) => a.timestamp - b.timestamp);
         const primero = registros[0].totalizador;
         const ultimo = registros[registros.length - 1].totalizador;
         const consumo = Math.max(0, ultimo - primero);
+        
+        //contar dias unicos
+        const diasUnicos = new Set();
+        registros.forEach(r => {
+          const diaKey = `${r.date.getFullYear()}-${r.date.getMonth()}-${r.date.getDate()}`;
+          diasUnicos.add(diaKey);
+        });
+        
         consumoPorSemana.set(semana, consumo);
+        diasPorSemana.set(semana, diasUnicos.size);
       }
     }
 
-    return consumoPorSemana;
+    return { consumoPorSemana, diasPorSemana };
   };
 
-  //agrupar por semana usando diferencia de totalizador
+  //agrupar por semana usando PROMEDIO
   const agruparPorSemana = (datos) => {
-    const consumoPorSemana = calcularConsumoPorSemana(datos);
+    const { consumoPorSemana, diasPorSemana } = calcularConsumoPorSemana(datos);
 
     const categorias = Array.from(consumoPorSemana.keys()).sort((a, b) => {
       const fechaA = a.split(' ')[1].split('/');
@@ -505,7 +522,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       return diaA - diaB;
     });
 
-    return { categorias, valores: categorias.map(k => consumoPorSemana.get(k)) };
+    //calcular promedio dividiendo por dias de cada semana
+    const valores = categorias.map(k => {
+      const consumo = consumoPorSemana.get(k) || 0;
+      const dias = diasPorSemana.get(k) || 1;
+      return consumo / dias;
+    });
+
+    return { categorias, valores };
   };
 
   //calcular consumo total (diferencia entre último y primer totalizador)
@@ -609,35 +633,36 @@ document.addEventListener("DOMContentLoaded", async () => {
       }]
     });
 
-    // GRAFICO COMPARATIVO
+    // GRAFICO COMPARATIVO - AHORA CON PROMEDIO
     let agrupador = agruparPorDia;
-    let tituloComparativo = 'Comparación consumo hídrico';
+    let tituloComparativo = 'Comparación consumo hídrico (promedio diario)';
 
     if (anio && mes && dia) {
       agrupador = agruparPorHora;
       tituloComparativo = 'Comparación consumo hídrico por hora';
     } else if (anio && mes) {
       agrupador = agruparPorDia;
-      tituloComparativo = 'Comparación consumo hídrico por día';
+      tituloComparativo = 'Comparación consumo hídrico (promedio diario)';
     } else if (anio) {
       agrupador = agruparPorMes;
-      tituloComparativo = 'Comparación consumo hídrico por mes';
+      tituloComparativo = 'Comparación consumo hídrico (promedio mensual)';
     } else {
       agrupador = agruparPorDia;
-      tituloComparativo = 'Comparación consumo hídrico últimos 7 días';
+      tituloComparativo = 'Comparación consumo hídrico últimos 7 días (promedio diario)';
     }
 
     const polloAgrupado = agrupador(polloFiltrado);
     const pavoAgrupado = agrupador(pavoFiltrado);
 
-    const totalPollo = calcularConsumoTotal(polloFiltrado);
-    const totalPavo = calcularConsumoTotal(pavoFiltrado);
-    const totalComparativo = totalPollo + totalPavo;
+    //calcular promedio para subtitle
+    const promedioPollo = polloAgrupado.promedio || 0;
+    const promedioPavo = pavoAgrupado.promedio || 0;
+    const promedioTotal = promedioPollo + promedioPavo;
 
     Highcharts.chart("grafico-comparativo", {
       chart: { type: "column" },
       title: { text: tituloComparativo },
-      subtitle: { text: `Consumo total: ${formatearNumero(totalComparativo)} m³` },
+      subtitle: { text: `Promedio: ${formatearNumero(promedioTotal)} m³` },
       xAxis: {
         categories: polloAgrupado.categorias,
         title: { text: (anio && mes && dia) ? "Hora" : (anio && mes ? "Día" : (anio ? "Mes" : "Día")) }
@@ -672,7 +697,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }]
     });
 
-    // GRAFICO SEMANAL
+    // GRAFICO SEMANAL - AHORA CON PROMEDIO
     const graficoSemanal = document.getElementById("grafico-semanal");
 
     if (dia) {
@@ -681,7 +706,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       graficoSemanal.style.display = 'block';
 
       let datosSemanaPollo, datosSemanasPavo;
-      let tituloSemanal = 'Consumo semanal (Mar-Vie)';
+      let tituloSemanal = 'Consumo semanal promedio (Mar-Vie)';
       let categoriasSemanal = [];
       let valoresPolloSemanal = [];
       let valoresPavoSemanal = [];
@@ -697,7 +722,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const polloSemanal = agruparPorSemana(datosSemanaPollo);
         const pavoSemanal = agruparPorSemana(datosSemanasPavo);
 
-        tituloSemanal = `Consumo semanas ${currentMonth}/${currentYear} (Mar-Vie)`;
+        tituloSemanal = `Consumo promedio semanas ${currentMonth}/${currentYear} (Mar-Vie)`;
         categoriasSemanal = polloSemanal.categorias;
         valoresPolloSemanal = polloSemanal.valores;
         valoresPavoSemanal = pavoSemanal.valores;
@@ -722,7 +747,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           return mA - mB;
         });
 
-        tituloSemanal = `Consumo mensual ${year} (Mar-Vie)`;
+        tituloSemanal = `Consumo promedio mensual ${year} (Mar-Vie)`;
         categoriasSemanal = categoriasUnion;
         valoresPolloSemanal = categoriasUnion.map(k => polloMes.valores[polloMes.categorias.indexOf(k)] || 0);
         valoresPavoSemanal = categoriasUnion.map(k => pavoMes.valores[pavoMes.categorias.indexOf(k)] || 0);
@@ -736,7 +761,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const polloSemanal = agruparPorSemana(datosSemanaPollo);
         const pavoSemanal = agruparPorSemana(datosSemanasPavo);
 
-        tituloSemanal = `Consumo semanas ${month}/${year} (Mar-Vie)`;
+        tituloSemanal = `Consumo promedio semanas ${month}/${year} (Mar-Vie)`;
         categoriasSemanal = polloSemanal.categorias;
         valoresPolloSemanal = polloSemanal.valores;
         valoresPavoSemanal = pavoSemanal.valores;
@@ -746,14 +771,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       valoresPolloSemanal = valoresPolloSemanal || [];
       valoresPavoSemanal = valoresPavoSemanal || [];
 
-      const totalPolloSemanal = valoresPolloSemanal.reduce((sum, v) => sum + v, 0);
-      const totalPavoSemanal = valoresPavoSemanal.reduce((sum, v) => sum + v, 0);
-      const totalSemanalGeneral = totalPolloSemanal + totalPavoSemanal;
+      const promedioPolloSemanal = valoresPolloSemanal.length > 0 ? 
+        valoresPolloSemanal.reduce((sum, v) => sum + v, 0) / valoresPolloSemanal.length : 0;
+      const promedioPavoSemanal = valoresPavoSemanal.length > 0 ? 
+        valoresPavoSemanal.reduce((sum, v) => sum + v, 0) / valoresPavoSemanal.length : 0;
+      const promedioSemanalGeneral = promedioPolloSemanal + promedioPavoSemanal;
 
       Highcharts.chart("grafico-semanal", {
         chart: { type: "column" },
         title: { text: tituloSemanal },
-        subtitle: { text: `Total: ${formatearNumero(totalSemanalGeneral)} m³` },
+        subtitle: { text: `Promedio: ${formatearNumero(promedioSemanalGeneral)} m³` },
         xAxis: { categories: categoriasSemanal, title: { text: (anio && !mes) ? "Mes" : "Semana" } },
         yAxis: { min: 0, title: { text: "Consumo (m³)" } },
         tooltip: {
