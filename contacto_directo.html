@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contactos Directos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <link rel="icon" href="Logo Ariztia.png" />
+  <link rel="stylesheet" href="./global.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f3f3;
+    }
+
+    /* Loader/Spinner */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .spinner {
+      border: 8px solid #f3f3f3;
+      border-top: 8px solid #3498db;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Card de filtros */
+    .filter-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    /* Contenedores de gráficos */
+    .chart-box {
+      background: white;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 8px;
+      min-height: 250px;
+    }
+
+    /* Botón limpiar filtros */
+    #limpiar-filtros {
+      color: white;
+      background: rgb(165, 13, 13);
+      border: none;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      width: 100%;
+    }
+
+    #limpiar-filtros:hover {
+      background: rgb(140, 10, 10);
+    }
+
+    /* Botón para abrir modal de carga */
+    .btn-upload {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    .btn-upload:hover {
+      background-color: #218838;
+    }
+
+    /* MODAL DE CARGA DE ARCHIVOS */
+    #modalUpload {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(5px);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-upload-content {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .modal-upload-content h5 {
+      font-weight: bold;
+      color: #b31919;
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 24px;
+    }
+
+    /* Botón cerrar modal */
+    .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 28px;
+      color: #666;
+      cursor: pointer;
+      font-weight: bold;
+      background: none;
+      border: none;
+      transition: color 0.2s;
+    }
+
+    .close-modal:hover { 
+      color: #b31919; 
+    }
+
+    /* Zona de drag & drop */
+    .drop-zone {
+      border: 3px dashed #ccc;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      background: #f9f9f9;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .drop-zone:hover {
+      border-color: #28a745;
+      background: #f0fff4;
+    }
+
+    .drop-zone.drag-over {
+      border-color: #007bff;
+      background: #e7f3ff;
+      transform: scale(1.02);
+    }
+
+    .drop-zone-icon {
+      font-size: 48px;
+      color: #28a745;
+      margin-bottom: 15px;
+    }
+
+    .drop-zone-text {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .drop-zone-subtext {
+      font-size: 14px;
+      color: #999;
+    }
+
+    /* Input file oculto */
+    #fileInput {
+      display: none;
+    }
+
+    /* Lista de archivos seleccionados */
+    .file-list {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .file-item-name {
+      font-size: 14px;
+      color: #333;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-item-size {
+      font-size: 12px;
+      color: #666;
+      margin: 0 10px;
+    }
+
+    .file-item-remove {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .file-item-remove:hover {
+      background: #c82333;
+    }
+
+    /* Botón de subir archivos */
+    .btn-submit-files {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      width: 100%;
+      margin-top: 20px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-submit-files:hover {
+      background: #0056b3;
+    }
+
+    .btn-submit-files:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    /* Mensaje de éxito/error */
+    .upload-message {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 14px;
+      display: none;
+    }
+
+    .upload-message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .upload-message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="top-bar text-rig">
+    <span id="welcome-message"></span>  
+    <button id="logout-button" class="btn btn-danger btn-sm" onclick="logout()">Cerrar sesión</button>
+  </div>
+
+  <!-- LOGO Y NAVEGACIÓN -->
+  <div class="container-fluid mb-3">
+    <div class="row">
+      <div class="col-12 header">
+        <img src="Logo Ariztia.png" alt="Logo Ariztia" style="width: 100px;" />
+      </div>
+      <div class="col-12 text-center">
+        <a href="index.html" class="btn btn-secondary mt-2">Inicio</a>
+        <a href="detenciones.html" class="btn btn-secondary mt-2">Detenciones</a>
+        <a class="btn btn-danger disabled mt-2">Contacto Directo</a>
+        <a href="no_conformidades.html" class="btn btn-secondary mt-2">No conformidades</a>
+        <a href="consumo_agua.html" class="mt-2 btn btn-secondary">Manejo de agua</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="container-fluid main-content">
+    <div class="row g-4">
+
+      <!-- PANEL LATERAL DE FILTROS -->
+      <div class="col-md-3 col-lg-2">
+        <div class="d-flex flex-column gap-3">
+
+          <!-- Card de filtros temporales -->
+          <div class="filter-card">
+            <!-- Filtro de Año -->
+            <label for="filtro-anio" class="form-label">Año</label>
+            <select id="filtro-anio" class="form-select form-select-sm"></select>
+
+            <!-- Filtro de Mes -->
+            <label for="filtro-mes" class="form-label mt-2">Mes</label>
+            <select id="filtro-mes" class="form-select form-select-sm" disabled></select>
+
+            <!-- Filtro de Día -->
+            <label for="filtro-dia" class="form-label mt-2">Día</label>
+            <select id="filtro-dia" class="form-select form-select-sm" disabled></select>
+            
+            <!-- Botón para abrir modal de carga -->
+            <button id="btnAbrirModal" class="btn-upload">
+              Cargar Archivos
+            </button>
+          </div>
+
+          <!-- Botón limpiar filtros -->
+          <div class="d-grid">
+            <button id="limpiar-filtros">Limpiar Filtros</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL DE GRÁFICOS -->
+      <div class="col-md-9 col-lg-10">
+        <div class="card p-4">
+          
+          <!-- Filtro de Área/Sala -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6 col-lg-4">
+              <label for="filtro-area" class="form-label">Área</label>
+              <select id="filtro-area" class="form-select form-select-sm"></select>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Gráfico de barras -->
+          <div class="chart-box mb-4">
+            <div id="container-grafico" style="min-height:400px;"></div>
+          </div>
+
+          <!-- Gráfico de pastel -->
+          <div class="chart-box">
+            <div id="pie-chart-container" style="min-height:400px;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LOADER -->
+  <div id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- MODAL DE CARGA DE ARCHIVOS (Drag & Drop) -->
+  <div id="modalUpload">
+    <div class="modal-upload-content">
+      <!-- Botón cerrar -->
+      <button class="close-modal" id="closeModal">&times;</button>
+      
+      <!-- Título -->
+      <h5>Cargar Archivos</h5>
+      
+      <!-- Zona de drag & drop -->
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-text">
+          Arrastra tus archivos aquí
+        </div>
+        <div class="drop-zone-subtext">
+          o haz clic para seleccionar
+        </div>
+      </div>
+
+      <!-- Input file oculto -->
+      <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.csv" />
+
+      <!-- Lista de archivos seleccionados -->
+      <div id="fileList" class="file-list"></div>
+
+      <!-- Botón para subir -->
+      <button id="btnSubirArchivos" class="btn-submit-files" disabled>
+        Subir Archivos
+      </button>
+
+      <!-- Mensaje de estado -->
+      <div id="uploadMessage" class="upload-message"></div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Scripts de autenticación y sesión -->
+  <script>
+
+      // verificacion de sesion
+      // verifica que el usuario este autenticado
+
+    if (!sessionStorage.getItem('user')) {
+      window.location.href = 'login.html';
+      throw new Error('No autorizado - redirigiendo a login');
+    }
+
+
+      // funcion para cerrar sesion
+      // limpia sessionStorage y redirige al login
+
+    function cerrarSesion() {
+      try {
+        sessionStorage.clear();
+      } catch (error) {
+        console.error('Error al limpiar sesion:', error);
+      }
+    }
+
+
+      // funcion de logout
+      // ejecuta cierre de sesion y redireccion
+
+    function logout() {
+      cerrarSesion();
+      window.location.replace('login.html');
+    }
+
+
+      // cargar informacion de usuario al iniciar
+      // muestra el mensaje de bienvenida con el usuario actual
+     
+    window.addEventListener('load', function() {
+      const user = sessionStorage.getItem('user');
+      const welcome = document.getElementById('welcome-message');
+      
+      //intentar parsear el usuario si es JSON
+      try {
+        const userObj = JSON.parse(user);
+        welcome.textContent = `Bienvenido, ${userObj.USER || userObj.email || user}`;
+      } catch {
+        welcome.textContent = `Bienvenido, ${user}`;
+      }
+    });
+
+
+      // verificacion de sesion en DOMContentLoaded
+      // doble verificación de autenticación
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const user = sessionStorage.getItem("user");
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      //event listener para boton de logout
+      document.getElementById("logout-button").addEventListener("click", () => {
+        sessionStorage.removeItem("user");
+        window.location.href = "login.html";
+      });
+    });
+  </script>
+
+  <!-- Script de lógica del modal de carga -->
+  <script>
+
+      // manejo del modal de carga de archivos
+      // sistema drag & drop tipo Google Drive
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('modalUpload');
+      const btnAbrir = document.getElementById('btnAbrirModal');
+      const btnCerrar = document.getElementById('closeModal');
+      const dropZone = document.getElementById('dropZone');
+      const fileInput = document.getElementById('fileInput');
+      const fileList = document.getElementById('fileList');
+      const btnSubir = document.getElementById('btnSubirArchivos');
+      const uploadMessage = document.getElementById('uploadMessage');
+
+      let archivosSeleccionados = [];
+
+
+        // abrir modal
+
+      btnAbrir.addEventListener('click', () => {
+        modal.style.display = 'flex';
+        archivosSeleccionados = [];
+        actualizarListaArchivos();
+      });
+
+
+        //cerrar modal
+
+      btnCerrar.addEventListener('click', () => {
+        modal.style.display = 'none';
+        archivosSeleccionados = [];
+        actualizarListaArchivos();
+        uploadMessage.style.display = 'none';
+      });
+
+
+        // cerrar modal al hacer click fuera
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+
+
+        //click en la zona de drop abre el selector de archivos
+
+      dropZone.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+
+        // prevenir comportamiento por defecto del drag 
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+      });
+
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+
+        // destacar la zona cuando se arrastra un archivo sobre ella
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+          dropZone.classList.add('drag-over');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+          dropZone.classList.remove('drag-over');
+        });
+      });
+
+
+        // manejar drop de archivos
+
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        manejarArchivos(files);
+      });
+
+
+        // manejar seleccion de archivos desde input
+
+      fileInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        manejarArchivos(files);
+      });
+
+
+        // procesar archivos seleccionados
+
+      function manejarArchivos(files) {
+        // convertir FileList a Array
+        const nuevosArchivos = Array.from(files);
+        
+        // validar tipos de archivo (solo Excel y CSV)
+        const archivosValidos = nuevosArchivos.filter(file => {
+          const ext = file.name.split('.').pop().toLowerCase();
+          return ['xlsx', 'xls', 'csv'].includes(ext);
+        });
+
+        if (archivosValidos.length !== nuevosArchivos.length) {
+          mostrarMensaje('Solo se permiten archivos Excel (.xlsx, .xls) y CSV', 'error');
+        }
+
+        // agregar a la lista (evitar duplicados por nombre)
+        archivosValidos.forEach(file => {
+          const existe = archivosSeleccionados.some(f => f.name === file.name);
+          if (!existe) {
+            archivosSeleccionados.push(file);
+          }
+        });
+
+        actualizarListaArchivos();
+      }
+
+
+      //  actualizar la lista visual de archivos
+
+      function actualizarListaArchivos() {
+        fileList.innerHTML = '';
+
+        if (archivosSeleccionados.length === 0) {
+          btnSubir.disabled = true;
+          return;
+        }
+
+        btnSubir.disabled = false;
+
+        archivosSeleccionados.forEach((file, index) => {
+          const fileItem = document.createElement('div');
+          fileItem.className = 'file-item';
+
+          const fileName = document.createElement('div');
+          fileName.className = 'file-item-name';
+          fileName.textContent = file.name;
+          fileName.title = file.name;
+
+          const fileSize = document.createElement('div');
+          fileSize.className = 'file-item-size';
+          fileSize.textContent = formatearTamano(file.size);
+
+          const btnRemove = document.createElement('button');
+          btnRemove.className = 'file-item-remove';
+          btnRemove.textContent = '✕';
+          btnRemove.addEventListener('click', () => {
+            archivosSeleccionados.splice(index, 1);
+            actualizarListaArchivos();
+          });
+
+          fileItem.appendChild(fileName);
+          fileItem.appendChild(fileSize);
+          fileItem.appendChild(btnRemove);
+          fileList.appendChild(fileItem);
+        });
+      }
+
+
+        // formatear tamaño de archivo
+
+      function formatearTamano(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+      }
+
+
+        // subir archivos a la API
+
+      btnSubir.addEventListener('click', async () => {
+        if (archivosSeleccionados.length === 0) return;
+
+        btnSubir.disabled = true;
+        btnSubir.textContent = 'Subiendo';
+        uploadMessage.style.display = 'none';
+
+        const user = sessionStorage.getItem("user");
+        try {
+          // subir cada archivo
+          for (const file of archivosSeleccionados) {
+            const formData = new FormData();
+            formData.append('ARCHIVO', file);
+            formData.append('USUARIO', user);
+
+            const response = await fetch('https://apimedidores.apidev.info/ariztia/ci_cd_uploadfile', {
+              method: 'POST',
+              headers: {
+                'authorization': 'marcuxo'
+              },
+              body: formData
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+              throw new Error(`Error al subir ${file.name}`);
+            }
+          }
+
+          // exito
+          mostrarMensaje(`${archivosSeleccionados.length} archivo(s) subido(s) correctamente`, 'success');
+          archivosSeleccionados = [];
+          actualizarListaArchivos();
+
+          // recargar datos despues de 1,5 segundos
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+
+        } catch (error) {
+          console.error('Error al subir archivos:', error);
+          mostrarMensaje('Error al subir archivos. Intenta nuevamente.', 'error');
+        } finally {
+          btnSubir.disabled = false;
+          btnSubir.textContent = 'Subir Archivos';
+        }
+      });
+
+
+        // mostrar mensaje de estado
+
+      function mostrarMensaje(texto, tipo) {
+        uploadMessage.textContent = texto;
+        uploadMessage.className = `upload-message ${tipo}`;
+        uploadMessage.style.display = 'block';
+      }
+    });
+  </script>
+
+  <!-- Script principal de contacto directo -->
+  <script src="contacto_directo.js"></script>
+  <script src="autorizacion_roles.js"></script>
+</body>
+</html>

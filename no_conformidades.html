@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>No Conformidades</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/pareto.js"></script>
+  <link rel="icon" href="Logo Ariztia.png" />
+  <link rel="stylesheet" href="./global.css">
+  <style>
+    body {
+      background-color: #f3f3f3;
+      font-family: Arial, sans-serif;
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .spinner {
+      border: 8px solid #f3f3f3;
+      border-top: 8px solid #3498db;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .filter-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .chart-box {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      padding: 15px;
+      min-height: 250px;
+    }
+
+    #limpiar-filtros {
+      color: #fff;
+      background-color: rgb(165, 13, 13);
+      border: none;
+      padding: 6px 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .btn-primario {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .btn-primario:hover {
+      background-color: #0056b3;
+    }
+
+    .btn-editar {
+      background-color: #28a745;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .btn-editar:hover {
+      background-color: #218838;
+    }
+
+    #overlay, #overlay-editar, #overlay-lista-editar {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgb(255, 255, 255);
+      backdrop-filter: blur(3px);
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 80px;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    /* Z-INDEX CORREGIDO PARA LOS OVERLAYS */
+    #overlay {
+      z-index: 9998;
+    }
+
+    #overlay-lista-editar {
+      z-index: 9999;
+    }
+
+    #overlay-editar {
+      z-index: 10000;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .modal-form {
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px 30px;
+      width: 90%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .modal-lista {
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px 30px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .modal-form h4, .modal-lista h4 {
+      font-weight: bold;
+      color: #b31919;
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 8px;
+    }
+
+    .modal-form label {
+      margin-top: 10px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .modal-form select,
+    .modal-form input,
+    .modal-form textarea {
+      margin-top: 4px;
+    }
+
+    .cerrar {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 22px;
+      color: #333;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .cerrar:hover { color: red; }
+
+    #modal-confirm {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      justify-content: center;
+      align-items: center;
+      z-index: 10002;
+    }
+
+    .modal-content {
+      background: #fff;
+      border-radius: 10px;
+      padding: 30px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    /* MODAL DE CONFIRMACIÓN DE EDICIÓN - Z-INDEX ALTO Y POSICIONAMIENTO CORRECTO */
+    #modal-confirm-editar {
+      display: none;
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: 10001 !important;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      min-width: 400px;
+      max-width: 90%;
+    }
+
+    #modal-confirm-editar h3 {
+      margin: 0 0 20px 0;
+      color: #ffffff;
+      font-size: 1.3rem;
+    }
+
+    #modal-confirm-editar p {
+      margin: 0 0 20px 0;
+      font-size: 1.1rem;
+    }
+
+    #modal-confirm-editar .modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* Fondo oscuro para el modal de confirmación de edición */
+    #modal-confirm-editar::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: -1;
+    }
+
+    .tabla-ultimas {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: Arial, sans-serif;
+    }
+
+    .tabla-ultimas th, .tabla-ultimas td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    .tabla-ultimas th { background-color: #f0f0f0; font-weight: bold; }
+    .tabla-ultimas tr:nth-child(even) { background-color: #fafafa; }
+    .tabla-ultimas tr:hover { background-color: #e0f7fa; }
+
+    .lista-folios {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .item-folio {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-folio:hover {
+      background-color: #f8f9fa;
+    }
+
+    .btn-editar-folio {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 5px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-editar-folio:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="top-bar text-rig">
+    <span id="welcome-message"></span>  
+    <button id="logout-button" class="btn btn-danger btn-sm" onclick="logout()">Cerrar sesión</button>
+  </div>
+
+  <div class="container-fluid mb-3">
+    <div class="row">
+      <div class="col-12 header">
+        <img src="Logo Ariztia.png" alt="Logo Ariztia" style="width: 100px;" />
+      </div>
+      <div class="col-12 text-center">
+        <a href="index.html" class="btn btn-secondary mt-2">Inicio</a>
+        <a href="detenciones.html" class="btn btn-secondary mt-2">Detenciones</a>
+        <a href="contacto_directo.html" class="btn btn-secondary mt-2">Contacto directo</a>
+        <a class="btn btn-danger disabled mt-2">No conformidades</a>
+        <a href="consumo_agua.html" class=" mt-2 btn btn-secondary">Manejo de agua</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- contenido principal -->
+  <div class="container-fluid main-content">
+    <div class="row g-4">
+
+      <!-- panel lateral -->
+      <div class="col-md-3 col-lg-2">
+        <div class="d-flex flex-column gap-3">
+          <div class="filter-card">
+            <label for="filtro-anio" class="form-label">Año</label>
+            <select id="filtro-anio" class="form-select form-select-sm"></select>
+
+            <label for="filtro-mes" class="form-label mt-2">Mes</label>
+            <select id="filtro-mes" class="form-select form-select-sm" disabled></select>
+
+            <label for="filtro-dia" class="form-label mt-2">Día</label>
+            <select id="filtro-dia" class="form-select form-select-sm" disabled></select>
+
+            <button id="btn-nueva-nc" class="btn-primario w-100 mt-3">Agregar No Conformidad</button>
+            <button id="btn-editar-nc" class="btn-editar w-100 mt-2">Editar No Conformidad</button>
+          </div>
+
+          <div class="d-grid">
+            <button id="limpiar-filtros">Limpiar filtros</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- grafico y tabla -->
+      <div class="col-md-9 col-lg-10">
+        <div class="card p-4">
+          <div class="row g-3 mb-3">
+            <div class="col-md-6 col-lg-4">
+              <label for="filtro-responsable" class="form-label">Responsable</label>
+              <select id="filtro-responsable" class="form-select form-select-sm"></select>
+            </div>
+            <div class="col-md-6 col-lg-4">
+              <label for="filtro-estado" class="form-label">Estado</label>
+              <select id="filtro-estado" class="form-select form-select-sm"></select>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="chart-box mb-4">
+            <div id="graficoNoConformidades" style="height:400px;"></div>
+          </div>
+
+          <div class="chart-box" id="tablaNoConformidades"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- modal nueva nc -->
+  <div id="overlay" style="display: none;">
+    <div class="modal-form position-relative">
+      <span id="cerrar-modal" class="cerrar">&times;</span>
+      <h4>Nueva No Conformidad</h4>
+
+      <form id="form-nc" class="d-flex flex-column" style="gap: 10px;">
+
+        <div>
+          <label for="folio">N Folio</label>
+          <textarea id="folio" name="folio" rows="1" required class="form-control form-control-sm"></textarea>
+        </div>
+
+        <div>
+          <label for="mes">Mes</label>
+          <select id="mes" name="mes" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="Enero">Enero</option>
+            <option value="Febrero">Febrero</option>
+            <option value="Marzo">Marzo</option>
+            <option value="Abril">Abril</option>
+            <option value="Mayo">Mayo</option>
+            <option value="Junio">Junio</option>
+            <option value="Julio">Julio</option>
+            <option value="Agosto">Agosto</option>
+            <option value="Septiembre">Septiembre</option>
+            <option value="Octubre">Octubre</option>
+            <option value="Noviembre">Noviembre</option>
+            <option value="Diciembre">Diciembre</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="anio">Año</label>
+          <select id="anio" name="anio" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fecha_deteccion">Fecha deteccion</label>
+          <input type="date" id="fecha_deteccion" name="fecha_deteccion" required class="form-control form-control-sm">
+        </div>
+
+        <div>
+          <label for="area">Área</label>
+          <select id="area" name="area" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="Calidad">Calidad</option>
+            <option value="Medio Ambiente">Medio Ambiente</option>
+            <option value="Seguridad">Seguridad</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="tipo_nc">Tipo de NC</label>
+          <select id="tipo_nc" name="tipo_nc" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="Desviacion microbiologica">Desviacion microbiologica</option>
+            <option value="Accidente">Accidente</option>
+            <option value="Medio Ambiente">Medio Ambiente</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="observacion">Observacion</label>
+          <textarea id="observacion" name="observacion" rows="3" required class="form-control form-control-sm"></textarea>
+        </div>
+
+        <div>
+          <label for="estado">Estado</label>
+          <select id="estado" name="estado" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="Abierto">Abierto</option>
+            <option value="Cerrado">Cerrado</option>
+          </select>
+        </div>
+
+        <button type="submit" disabled class="btn btn-primary w-100 mt-2">Enviar datos</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- modal lista de folios para editar -->
+  <div id="overlay-lista-editar" style="display: none;">
+    <div class="modal-lista position-relative">
+      <span id="cerrar-modal-lista" class="cerrar">&times;</span>
+      <h4>Seleccionar No Conformidad para Editar</h4>
+      <div class="lista-folios" id="lista-folios">
+        <!-- Se llena dinámicamente con JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- modal editar nc -->
+  <div id="overlay-editar" style="display: none;">
+    <div class="modal-form position-relative">
+      <span id="cerrar-modal-editar" class="cerrar">&times;</span>
+      <h4>Editar No Conformidad</h4>
+
+      <form id="form-nc-editar" class="d-flex flex-column" style="gap: 10px;">
+        <input type="hidden" id="folio-original" name="folio_original">
+
+        <div>
+          <label for="folio-editar">N Folio</label>
+          <textarea id="folio-editar" name="folio" rows="1" required class="form-control form-control-sm"></textarea>
+        </div>
+
+        <div>
+          <label for="mes-editar">Mes</label>
+          <select id="mes-editar" name="mes" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="Enero">Enero</option>
+            <option value="Febrero">Febrero</option>
+            <option value="Marzo">Marzo</option>
+            <option value="Abril">Abril</option>
+            <option value="Mayo">Mayo</option>
+            <option value="Junio">Junio</option>
+            <option value="Julio">Julio</option>
+            <option value="Agosto">Agosto</option>
+            <option value="Septiembre">Septiembre</option>
+            <option value="Octubre">Octubre</option>
+            <option value="Noviembre">Noviembre</option>
+            <option value="Diciembre">Diciembre</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="anio-editar">Año</label>
+          <select id="anio-editar" name="anio" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fecha_deteccion-editar">Fecha deteccion</label>
+          <input type="date" id="fecha_deteccion-editar" name="fecha_deteccion" required class="form-control form-control-sm">
+        </div>
+
+        <div>
+          <label for="area-editar">Área</label>
+          <select id="area-editar" name="area" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="Calidad">Calidad</option>
+            <option value="Medio Ambiente">Medio Ambiente</option>
+            <option value="Seguridad">Seguridad</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="tipo_nc-editar">Tipo de NC</label>
+          <select id="tipo_nc-editar" name="tipo_nc" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="Desviacion microbiologica">Desviacion microbiologica</option>
+            <option value="Accidente">Accidente</option>
+            <option value="Medio Ambiente">Medio Ambiente</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="observacion-editar">Observacion</label>
+          <textarea id="observacion-editar" name="observacion" rows="3" required class="form-control form-control-sm"></textarea>
+        </div>
+
+        <div>
+          <label for="estado-editar">Estado</label>
+          <select id="estado-editar" name="estado" required class="form-select form-select-sm">
+            <option value="">Seleccione</option>
+            <option value="Abierto">Abierto</option>
+            <option value="Cerrado">Cerrado</option>
+          </select>
+        </div>
+
+        <button type="submit" disabled class="btn btn-success w-100 mt-2">Guardar cambios</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- modal confirmacion -->
+  <div id="modal-confirm">
+    <div class="modal-content text-center p-4">
+      <p class="mb-3">Esta seguro de enviar estos datos?</p>
+      <div class="d-flex justify-content-center gap-3">
+        <button id="cancelar-envio" class="btn btn-secondary">No, editar</button>
+        <button id="confirmar-envio" class="btn btn-primary">Si, enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- modal confirmacion editar - CORREGIDO CON Z-INDEX ALTO -->
+  <div id="modal-confirm-editar">
+    <div class="text-center">
+      <p class="mb-3">¿Está seguro de guardar los cambios?</p>
+      <div class="d-flex justify-content-center gap-3 modal-buttons">
+        <button id="cancelar-envio-editar" class="btn btn-secondary">No, revisar</button>
+        <button id="confirmar-envio-editar" class="btn btn-success">Sí, guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- loader -->
+  <div id="loader"><div class="spinner"></div></div>
+
+  <!-- bootstrap js -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // validacion de sesion
+    if (!sessionStorage.getItem('user')) {
+      window.location.href = 'login.html';
+      throw new Error('No autorizado - redirigiendo a login');
+    }
+
+    function cerrarSesion() {
+      sessionStorage.clear();
+    }
+    
+    function logout() {
+      cerrarSesion();
+      window.location.replace('login.html');
+    }
+
+    window.addEventListener('load', function() {
+      const user = sessionStorage.getItem('user');
+      const welcome = document.getElementById('welcome-message');
+      welcome.textContent = (user?.USER || user?.email || user);
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const user = sessionStorage.getItem("user");
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      
+      document.getElementById("logout-button").addEventListener("click", () => {
+        sessionStorage.removeItem("user");
+        window.location.href = "login.html";
+      });
+    });
+
+    // control del modal de nueva no conformidad
+    document.addEventListener("DOMContentLoaded", () => {
+      const btnNuevaNc = document.getElementById("btn-nueva-nc");
+      const overlay = document.getElementById("overlay");
+      const cerrarModal = document.getElementById("cerrar-modal");
+
+      // abrir modal
+      btnNuevaNc.addEventListener("click", () => {
+        overlay.style.display = "flex";
+        document.body.style.overflow = "hidden";
+      });
+
+      // cerrar modal
+      cerrarModal.addEventListener("click", () => {
+        overlay.style.display = "none";
+        document.body.style.overflow = "auto";
+      });
+
+      // cerrar modal al hacer click fuera del cuadro
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          overlay.style.display = "none";
+          document.body.style.overflow = "auto";
+        }
+      });
+    });
+  </script>
+
+  <script src="autorizacion_roles.js"></script>
+  <script src="no_conformidades.js"></script>
+</body>
+</html>

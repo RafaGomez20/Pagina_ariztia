@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inicio</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/pareto.js"></script>
+  <link rel="icon" href="Logo Ariztia.png" />
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      background-color: #f8f9fa;
+      padding-top: 80px;
+    }
+
+    .navbar-custom {
+      background-color: #ffffff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .navbar-brand img {
+      height: 45px;
+    }
+
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header-section {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header-section h1 {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .nav-buttons {
+      margin-bottom: 30px;
+    }
+
+    .nav-buttons a {
+      margin: 5px;
+    }
+
+    .chart-card {
+      background: #ffffff;
+      border: 1px solid #dee2e6;
+      border-radius: 10px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+      padding: 20px;
+      height: 450px;
+      position: relative;
+    }
+
+    .loader {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #777;
+      font-weight: bold;
+    }
+
+    .detail-table-container {
+      display: none;
+      margin-top: 30px;
+      background: #ffffff;
+      border: 1px solid #dee2e6;
+      border-radius: 10px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+      padding: 20px;
+    }
+
+    .detail-table-container.show {
+      display: block;
+    }
+
+    .table-responsive {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .detail-table th {
+      position: sticky;
+      top: 0;
+      background-color: #343a40;
+      color: white;
+      z-index: 10;
+    }
+
+    .detail-table {
+      font-size: 0.9rem;
+    }
+
+    .close-table-btn {
+      margin-bottom: 15px;
+    }
+
+    .chart-instructions {
+      font-size: 0.85rem;
+      color: #6c757d;
+      margin-top: 10px;
+      text-align: center;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra superior fija -->
+  <nav class="navbar navbar-expand-lg navbar-custom fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center" href="#">
+        <img src="Logo Ariztia.png" alt="Logo">
+        <span class="ms-2 fw-bold text-dark">El Paico S.A</span>
+      </a>
+      <div class="d-flex align-items-center">
+        <span id="welcome-message" class="me-3 fw-semibold text-dark"></span>
+        <button id="logout-button" class="btn btn-danger btn-sm" onclick="logout()">Cerrar Sesión</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Contenido principal -->
+  <div class="main-container">
+    <div class="container">
+      
+      <!-- Header -->
+      <div class="row">
+        <div class="col-12">
+          <div class="header-section">
+            <h1>Agroindustrial El Paico S.A</h1>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegación -->
+      <div class="row">
+        <div class="col-12">
+          <div class="text-center nav-buttons">
+            <a class="btn btn-secondary disabled">Inicio</a>
+            <a href="detenciones.html" class="btn btn-outline-secondary">Detenciones</a>
+            <a href="contacto_directo.html" class="btn btn-outline-secondary">Contacto directo</a>
+            <a href="no_conformidades.html" class="btn btn-outline-secondary">No conformidades</a>
+            <a href="consumo_agua.html" class="btn btn-outline-secondary">Manejo de agua</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grillas de gráficos -->
+      <div class="row g-4">
+        <!-- Gráfico de Detenciones -->
+        <div class="col-md-6">
+          <div id="chart-detenciones" class="chart-card"></div>
+          <div class="chart-instructions">
+            Click: Ver detalle | Doble Click: Ir a página filtrada
+          </div>
+        </div>
+
+        <!-- Gráfico de Contacto Directo -->
+        <div class="col-md-6">
+          <div id="chart-contacto" class="chart-card"></div>
+          <div class="chart-instructions">
+            Doble Click: Ir a página filtrada por sala
+          </div>
+        </div>
+
+        <!-- Gráfico de No Conformidades -->
+        <div class="col-md-6">
+          <div id="chart-noconformidades" class="chart-card"></div>
+          <div class="chart-instructions">
+            Click: Ver detalle | Doble Click: Ir a página filtrada
+          </div>
+        </div>
+
+        <!-- Gráfico de Consumo de Agua -->
+        <div class="col-md-6">
+          <div id="chart-agua" class="chart-card"></div>
+          <div class="chart-instructions">
+            Doble Click: Ir a página filtrada por fecha
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de detalles de Detenciones -->
+      <div class="row mt-4">
+        <div class="col-12">
+          <div id="detalle-detenciones" class="detail-table-container">
+            <button class="btn btn-sm btn-secondary close-table-btn" onclick="cerrarTabla('detalle-detenciones')">Cerrar</button>
+            <h4 id="titulo-detenciones">Detalle de Detenciones</h4>
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered detail-table">
+                <thead class="table-dark">
+                  <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Area</th>
+                    <th>Sección</th>
+                    <th>TPM</th>
+                    <th>Turno</th>
+                    <th>Detención</th>
+                    <th>Observación</th>
+                    <th>Hora Inicio</th>
+                    <th>Hora Término</th>
+                    <th>Minutos</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-detenciones"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de detalles de No Conformidades -->
+      <div class="row mt-4">
+        <div class="col-12">
+          <div id="detalle-noconformidades" class="detail-table-container">
+            <button class="btn btn-sm btn-secondary close-table-btn" onclick="cerrarTabla('detalle-noconformidades')">Cerrar</button>
+            <h4 id="titulo-noconformidades">Detalle de No Conformidades</h4>
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered detail-table">
+                <thead class="table-dark">
+                  <tr>
+                    <th>N° Folio</th>
+                    <th>Fecha Detección</th>
+                    <th>Área</th>
+                    <th>Observación</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-noconformidades"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Script principal -->
+  <script>
+    /**
+     * VARIABLES GLOBALES Y AUTENTICACIÓN
+     */
+    
+    // Variables globales para almacenar datos
+    let datosDetenciones = [];
+    let datosNoConformidades = [];
+
+    // Sistema de detección de doble click
+    let clickTimer = null;
+    let clickDelay = 300; // ms para detectar doble click
+
+    // Verificación de sesión
+    if (!sessionStorage.getItem('user')) {
+      window.location.href = 'login.html';
+      throw new Error('No autorizado - redirigiendo a login');
+    }
+
+    /**
+     * FUNCIÓN: Cerrar sesión
+     */
+    function cerrarSesion() {
+      try { 
+        sessionStorage.clear(); 
+      } catch (e) { 
+        console.error('Error al limpiar sesion:', e); 
+      }
+    }
+
+    /**
+     * FUNCIÓN: Logout
+     */
+    function logout() {
+      cerrarSesion();
+      window.location.replace('login.html');
+    }
+
+    /**
+     * CARGAR MENSAJE DE BIENVENIDA
+     */
+    window.addEventListener('load', function() {
+      const user = sessionStorage.getItem('user');
+      const welcome = document.getElementById('welcome-message');
+      
+      try {
+        const userObj = JSON.parse(user);
+        welcome.textContent = "Bienvenid@, " + (userObj.USER || userObj.email || user);
+      } catch {
+        welcome.textContent = "Bienvenid@, " + user;
+      }
+    });
+
+    /**
+     * FUNCIONES AUXILIARES
+     */
+
+    /**
+     * Mostrar loader en un contenedor
+     */
+    function mostrarLoader(id) {
+      const cont = document.getElementById(id);
+      if (cont) cont.innerHTML = '<div class="loader">Cargando...</div>';
+    }
+
+    /**
+     * Ocultar loader de un contenedor
+     */
+    function ocultarLoader(id) {
+      const cont = document.getElementById(id);
+      if (cont) cont.innerHTML = '';
+    }
+
+    /**
+     * Cerrar tabla de detalles
+     */
+    function cerrarTabla(idTabla) {
+      document.getElementById(idTabla).classList.remove('show');
+    }
+
+    /**
+     * Manejar click y doble click en puntos del gráfico
+     */
+    function manejarClickPunto(categoria, callbackSimple, callbackDoble) {
+      if (clickTimer === null) {
+        // Primer click
+        clickTimer = setTimeout(function() {
+          clickTimer = null;
+          // Click simple
+          if (callbackSimple) callbackSimple(categoria);
+        }, clickDelay);
+      } else {
+        // Segundo click (doble click)
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        // Doble click
+        if (callbackDoble) callbackDoble(categoria);
+      }
+    }
+
+    /**
+     * FUNCIONES DE DETALLES
+     */
+
+    /**
+     * Mostrar detalles de detenciones filtradas por área
+     */
+    function mostrarDetalleDetenciones(area) {
+      const datosFiltrados = datosDetenciones.filter(d => (d["Desc Area"] || "Sin area") === area);
+      const tbody = document.getElementById('tbody-detenciones');
+      tbody.innerHTML = '';
+
+      datosFiltrados.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="small">${index + 1}</td>
+          <td class="small">${item['Fecha'] || '-'}</td>
+          <td class="small">${item['Desc Area'] || '-'}</td>
+          <td class="small">${item['Desc Seccion'] || '-'}</td>
+          <td class="small">${item['Desc TPM'] || '-'}</td>
+          <td class="small">${item['Desc Turno'] || '-'}</td>
+          <td class="small">${item['Desc Detencion'] || '-'}</td>
+          <td class="small">${item.Observacion || '-'}</td>
+          <td class="small">${item['Hora Inicio'] || '-'}</td>
+          <td class="small">${item['Hora Termino'] || '-'}</td>
+          <td class="small"><strong>${item.Minutos || 0}</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('titulo-detenciones').textContent = 
+        `Detalle de Detenciones - ${area} (${datosFiltrados.length} registros)`;
+      document.getElementById('detalle-detenciones').classList.add('show');
+      document.getElementById('detalle-detenciones').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /**
+     * Ir a página de detenciones con filtro
+     */
+    function irADetenciones(area) {
+      const areaEncoded = encodeURIComponent(area);
+      window.location.href = `detenciones.html?area=${areaEncoded}`;
+    }
+
+    /**
+     * Mostrar detalles de no conformidades filtradas por área
+     */
+    function mostrarDetalleNoConformidades(area) {
+      const datosFiltrados = datosNoConformidades.filter(d => (d.AREA || "Sin area") === area);
+      const tbody = document.getElementById('tbody-noconformidades');
+      tbody.innerHTML = '';
+
+      datosFiltrados.forEach((item) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="small">${item.N_FOLIO || '-'}</td>
+          <td class="small">${item.FECHA_DETECCION || '-'}</td>
+          <td class="small">${item.AREA || '-'}</td>
+          <td class="small">${item.OBSERVACION || '-'}</td>
+          <td class="small">${item.ESTADO || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('titulo-noconformidades').textContent = 
+        `Detalle de No Conformidades - ${area} (${datosFiltrados.length} registros)`;
+      document.getElementById('detalle-noconformidades').classList.add('show');
+      document.getElementById('detalle-noconformidades').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /**
+     * Ir a página de no conformidades con filtro
+     */
+    function irANoConformidades(area) {
+      const areaEncoded = encodeURIComponent(area);
+      window.location.href = `no_conformidades.html?area=${areaEncoded}`;
+    }
+
+    /**
+     * Ir a página de contacto directo con filtro
+     */
+    function irAContactoDirecto(sala) {
+      const salaEncoded = encodeURIComponent(sala);
+      window.location.href = `contacto_directo.html?sala=${salaEncoded}`;
+    }
+
+    /**
+     * Ir a página de consumo de agua con filtro
+     */
+    function irAConsumoAgua(fecha) {
+      const fechaEncoded = encodeURIComponent(fecha);
+      window.location.href = `consumo_agua.html?fecha=${fechaEncoded}`;
+    }
+
+    /**
+     * GRÁFICO DE DETENCIONES (SOLO SS.GG)
+     */
+    const annio = 2025;
+    const mes = "Sep";
+    const urlDetenciones = `https://apimedidores.apidev.info/ariztia/getdetenciones_mes_annio/${annio}/${mes}`;
+
+    mostrarLoader('chart-detenciones');
+    fetch(urlDetenciones, {
+      headers: { 
+        "authorization": "paico2021", 
+        "Accept": "application/json", 
+        "Content-Type": "application/json" 
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      ocultarLoader('chart-detenciones');
+      const datos = data.data.data || [];
+      
+      // FILTRAR SOLO REGISTROS CON DESC RESPONSABLE = "SS.GG"
+      const datosFiltrados = datos.filter(d => {
+        const responsable = (d["Desc Responsable"] || "").trim().toUpperCase();
+        return responsable === "SSGG";
+      });
+      
+      datosDetenciones = datosFiltrados;
+
+      // Agrupar por área y sumar minutos
+      const porArea = {};
+      datosFiltrados.forEach(d => {
+        const area = d["Desc Area"] || "Sin area";
+        const minutos = parseFloat(d.Minutos) || 0;
+        porArea[area] = (porArea[area] || 0) + minutos;
+      });
+
+      // Ordenar de mayor a menor
+      const entries = Object.entries(porArea).sort((a,b) => b[1] - a[1]);
+      const categorias = entries.map(e => e[0]);
+      const valores = entries.map(e => e[1]);
+      
+      // Calcular porcentaje acumulado
+      const total = valores.reduce((s,v) => s + v, 0);
+      let acum = 0;
+      const acumPct = valores.map(v => {
+        acum += v;
+        return +(acum / total * 100).toFixed(0);
+      });
+
+      // Renderizar gráfico
+      Highcharts.chart('chart-detenciones', {
+        chart: { type: 'column' },
+        title: { text: 'Detenciones (últimos 30 días)' },
+        subtitle: { text: `Total minutos por área (${datosFiltrados.length} registros)` },
+        xAxis: { categories: categorias },
+        yAxis: [
+          { title: { text: 'Minutos' } },
+          { title: { text: 'Acumulado (%)' }, opposite: true, max: 100 }
+        ],
+        plotOptions: {
+          series: {
+            cursor: 'pointer',
+            point: {
+              events: {
+                click: function() {
+                  const area = this.category;
+                  manejarClickPunto(
+                    area,
+                    mostrarDetalleDetenciones,
+                    irADetenciones
+                  );
+                }
+              }
+            }
+          }
+        },
+        series: [
+          { type: 'column', name: 'Minutos', data: valores },
+          { type: 'line', name: 'Acumulado (%)', data: acumPct, yAxis: 1 }
+        ],
+        credits: { enabled: false }
+      });
+    })
+    .catch(() => {
+      ocultarLoader('chart-detenciones');
+      document.getElementById('chart-detenciones').innerHTML = 
+        '<div class="text-danger text-center">Error al cargar datos</div>';
+    });
+
+    /**
+     * GRÁFICO DE CONTACTO DIRECTO (PROMEDIO POR SALA)
+     */
+    const CAMPOS_EXCLUIDOS_CONTACTO = [
+      "_id", "ANNIO", "SEMANA", "META", "FECHA", "__v",
+      "id", "año", "ano", "mes", "dia", "day", "month", "year",
+      "DIA", "MES", "ID", "INY TRUTRO", "INY_TRUTRO"
+    ];
+
+    function esSalaDeProceosContacto(key, value) {
+      const keyLower = key.toLowerCase();
+      
+      if (CAMPOS_EXCLUIDOS_CONTACTO.some(campo => keyLower.includes(campo.toLowerCase()))) {
+        return false;
+      }
+      
+      if (typeof value !== "number" && typeof value !== "string") {
+        return false;
+      }
+      
+      const numVal = typeof value === "number" 
+        ? value 
+        : parseFloat(String(value).replace(",", "."));
+      
+      return !isNaN(numVal);
+    }
+
+    const urlContacto = "https://apimedidores.apidev.info/ariztia/contacto_directo_indirecto";
+    mostrarLoader('chart-contacto');
+    
+    fetch(urlContacto, {
+      headers: { 
+        "authorization": "paico2021",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      }
+    })
+    .then(res => res.json())
+    .then(json => {
+      ocultarLoader('chart-contacto');
+      
+      if (!Array.isArray(json.data)) {
+        console.warn("Formato de datos inesperado");
+        return;
+      }
+      
+      const raw = json.data;
+      
+      // Calcular fecha de corte (últimos 30 días)
+      const fechaCorte = new Date();
+      fechaCorte.setDate(fechaCorte.getDate() - 30);
+      
+      const porArea = {};
+      let registrosProcesados = 0;
+      let salasEncontradas = new Set();
+      
+      // Procesar cada registro de la API
+      raw.forEach(item => {
+        const fechaItem = new Date(item.FECHA);
+        if (fechaItem < fechaCorte) return;
+        
+        Object.keys(item).forEach(key => {
+          const value = item[key];
+          
+          if (!esSalaDeProceosContacto(key, value)) {
+            return;
+          }
+          
+          const numVal = typeof value === "number" 
+            ? value 
+            : parseFloat(String(value).replace(",", "."));
+          
+          if (isNaN(numVal)) return;
+          
+          const sala = key.replace(/_/g, " ").trim();
+          
+          if (!porArea[sala]) {
+            porArea[sala] = { suma: 0, count: 0 };
+          }
+          
+          porArea[sala].suma += (numVal * 100);
+          porArea[sala].count += 1;
+          
+          salasEncontradas.add(sala);
+          registrosProcesados++;
+        });
+      });
+      
+      // CALCULAR PROMEDIO POR SALA
+      const promedios = {};
+      Object.keys(porArea).forEach(sala => {
+        const datos = porArea[sala];
+        promedios[sala] = datos.count > 0 ? datos.suma / datos.count : 0;
+      });
+      
+      // Ordenar por promedio descendente
+      const entries = Object.entries(promedios).sort((a, b) => b[1] - a[1]);
+      const categorias = entries.map(e => e[0]);
+      const valores = entries.map(e => +(e[1]).toFixed(2));
+      
+      // Calcular porcentaje acumulado
+      const total = valores.reduce((s, v) => s + v, 0);
+      let acum = 0;
+      const acumPct = valores.map(v => {
+        acum += v;
+        return +(acum / total * 100).toFixed(2);
+      });
+
+      // Renderizar gráfico
+      Highcharts.chart('chart-contacto', {
+        chart: { type: 'column' },
+        title: { text: 'Contacto Directo (últimos 30 días)' },
+        subtitle: { text: `Promedio de contacto % por sala - ${salasEncontradas.size} salas` },
+        xAxis: { 
+          categories: categorias,
+          labels: { 
+            rotation: -45,
+            style: { fontSize: '10px' }
+          }
+        },
+        yAxis: [
+          { title: { text: 'Promedio (%)' } },
+          { title: { text: 'Acumulado (%)' }, opposite: true, max: 100 }
+        ],
+        plotOptions: {
+          series: {
+            cursor: 'pointer',
+            point: {
+              events: {
+                click: function() {
+                  const sala = this.category;
+                  manejarClickPunto(
+                    sala,
+                    null,
+                    irAContactoDirecto
+                  );
+                }
+              }
+            }
+          }
+        },
+        series: [
+          { 
+            type: 'column', 
+            name: 'Promedio %', 
+            data: valores
+          },
+          { 
+            type: 'line', 
+            name: 'Acumulado (%)', 
+            data: acumPct, 
+            yAxis: 1 
+          }
+        ],
+        tooltip: {
+          formatter: function() {
+            return '<b>' + this.x + '</b><br/>' +
+                   this.series.name + ': <b>' + this.y.toFixed(2) + '%</b>';
+          }
+        },
+        credits: { enabled: false }
+      });
+    })
+    .catch(error => {
+      console.error("Error al cargar contacto directo:", error);
+      ocultarLoader('chart-contacto');
+      document.getElementById('chart-contacto').innerHTML = 
+        '<div class="text-danger text-center">Error al cargar datos</div>';
+    });
+
+    /**
+     * GRÁFICO DE NO CONFORMIDADES
+     */
+    const urlNoConformidades = "https://apimedidores.apidev.info/ariztia/no_conformidades";
+
+    mostrarLoader('chart-noconformidades');
+    fetch(urlNoConformidades, {
+      headers: { 
+        "authorization": "paico2021", 
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      }
+    })
+    .then(res => res.json())
+    .then(json => {
+      ocultarLoader('chart-noconformidades');
+      
+      if (json.success && json.data) {
+        const datos = json.data;
+        datosNoConformidades = datos;
+
+        const porArea = {};
+
+        datos.forEach(d => {
+          const area = d.AREA || "Sin area";
+          porArea[area] = (porArea[area] || 0) + 1;
+        });
+
+        const entries = Object.entries(porArea).sort((a,b) => b[1] - a[1]);
+        const categorias = entries.map(e => e[0]);
+        const valores = entries.map(e => e[1]);
+
+        const total = valores.reduce((sum,v) => sum + v, 0);
+        let acumulado = 0;
+        const acumuladoPct = valores.map(v => {
+          acumulado += v;
+          return +(acumulado / total * 100).toFixed(2);
+        });
+
+        Highcharts.chart('chart-noconformidades', {
+          chart: { type: 'column' },
+          title: { text: 'No Conformidades (todas)' },
+          subtitle: { text: 'No conformidades por área' },
+          xAxis: { categories: categorias },
+          yAxis: [
+            { title: { text: 'Cantidad' } },
+            { title: { text: 'Acumulado (%)' }, opposite: true, max: 100 }
+          ],
+          plotOptions: {
+            series: {
+              cursor: 'pointer',
+              point: {
+                events: {
+                  click: function() {
+                    const area = this.category;
+                    manejarClickPunto(
+                      area,
+                      mostrarDetalleNoConformidades,
+                      irANoConformidades
+                    );
+                  }
+                }
+              }
+            }
+          },
+          series: [
+            { type: 'column', name: 'Cantidad', data: valores },
+            { type: 'line', name: 'Acumulado (%)', data: acumuladoPct, yAxis: 1 }
+          ],
+          credits: { enabled: false }
+        });
+      }
+    })
+    .catch(() => {
+      ocultarLoader('chart-noconformidades');
+      document.getElementById('chart-noconformidades').innerHTML =
+        '<div class="text-danger text-center">Error al cargar datos</div>';
+    });
+
+    /**
+     * GRÁFICO DE CONSUMO DE AGUA - CORREGIDO
+     */
+    const urlAgua = "https://apimedidores.apidev.info/ariztia/getconsumoshidricos_ts/M3H_PANTALON_POLLO/m1/" +
+                    (Date.now() - 30*24*60*60*1000) + "/" + Date.now();
+
+    mostrarLoader('chart-agua');
+    fetch(urlAgua, {
+      headers: { 
+        "authorization": "paico2021", 
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      ocultarLoader('chart-agua');
+      const datos = data.data.data || [];
+
+      if (!datos.length) {
+        document.getElementById('chart-agua').innerHTML =
+          '<div class="text-muted text-center">Sin datos disponibles</div>';
+        return;
+      }
+
+      // Agrupar por día
+      const porDia = {};
+      datos.forEach(d => {
+        const fecha = new Date(d.timestamp);
+        const key = fecha.toISOString().slice(0,10);
+        
+        if (!porDia[key]) {
+          porDia[key] = [];
+        }
+        
+        porDia[key].push({
+          timestamp: d.timestamp,
+          caudal: d.caudal
+        });
+      });
+
+      // Calcular consumo diario (último - primer totalizador)
+      const consumoDiario = {};
+      
+      Object.keys(porDia).forEach(dia => {
+        const registrosDia = porDia[dia].sort((a, b) => a.timestamp - b.timestamp);
+        
+        if (registrosDia.length >= 2) {
+          const primerTotalizador = registrosDia[0].caudal;
+          const ultimoTotalizador = registrosDia[registrosDia.length - 1].caudal;
+          
+          // El consumo del día es la diferencia entre el último y el primer totalizador
+          consumoDiario[dia] = ultimoTotalizador - primerTotalizador;
+        } else if (registrosDia.length === 1) {
+          // Si solo hay un registro, asumimos que es el consumo del día
+          consumoDiario[dia] = registrosDia[0].caudal;
+        }
+      });
+
+      // Ordenar por consumo de mayor a menor
+      const entries = Object.entries(consumoDiario)
+        .filter(e => e[1] >= 0) // Filtrar valores negativos (posibles errores)
+        .sort((a, b) => b[1] - a[1]);
+      
+      const categorias = entries.map(e => e[0]);
+      const valores = entries.map(e => Math.round(e[1] * 100) / 100); // Redondear a 2 decimales
+
+      // Calcular porcentaje acumulado
+      const total = valores.reduce((sum, v) => sum + v, 0);
+      let acumulado = 0;
+      const acumuladoPct = valores.map(v => {
+        acumulado += v;
+        return +(acumulado / total * 100).toFixed(2);
+      });
+
+      // Renderizar gráfico
+      Highcharts.chart('chart-agua', {
+        chart: { type: 'column' },
+        title: { text: 'Consumo de Agua (últimos 30 días)' },
+        subtitle: { text: `Consumo diario por totalizadores - Total: ${total.toFixed(2)} m³` },
+        xAxis: { 
+          categories: categorias,
+          labels: {
+            rotation: -45,
+            style: { fontSize: '9px' }
+          }
+        },
+        yAxis: [
+          { title: { text: 'Consumo (m³)' } },
+          { title: { text: 'Acumulado (%)' }, opposite: true, max: 100 }
+        ],
+        plotOptions: {
+          series: {
+            cursor: 'pointer',
+            point: {
+              events: {
+                click: function() {
+                  const fecha = this.category;
+                  manejarClickPunto(
+                    fecha,
+                    null,
+                    irAConsumoAgua
+                  );
+                }
+              }
+            }
+          }
+        },
+        series: [
+          { 
+            type: 'column', 
+            name: 'Consumo (m³)', 
+            data: valores,
+            color: '#0d6efd'
+          },
+          { 
+            type: 'line', 
+            name: 'Acumulado (%)', 
+            data: acumuladoPct, 
+            yAxis: 1,
+            color: '#198754'
+          }
+        ],
+        tooltip: { 
+          shared: true,
+          formatter: function() {
+            let tooltip = '<b>' + this.x + '</b><br/>';
+            this.points.forEach(point => {
+              if (point.series.name === 'Consumo (m³)') {
+                tooltip += point.series.name + ': <b>' + point.y.toFixed(2) + ' m³</b><br/>';
+              } else {
+                tooltip += point.series.name + ': <b>' + point.y.toFixed(2) + '%</b>';
+              }
+            });
+            return tooltip;
+          }
+        },
+        credits: { enabled: false }
+      });
+    })
+    .catch(error => {
+      console.error("Error al cargar consumo de agua:", error);
+      ocultarLoader('chart-agua');
+      document.getElementById('chart-agua').innerHTML =
+        '<div class="text-danger text-center">Error al cargar datos</div>';
+    });
+
+  </script>
+
+</body>
+</html>
